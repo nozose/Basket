@@ -1,0 +1,4 @@
+name=wefwe
+version=1.21.5
+launcher=paper
+eula=true
