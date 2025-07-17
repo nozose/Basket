@@ -32,6 +32,7 @@ public class Basket extends JFrame {
         navigation.setPreferredSize(new Dimension(600, 50));
 
         addButton = new JButton("서버 추가");
+        addButton.setFocusPainted(false);        // 포커스 표시 제거
         addButton.setPreferredSize(new Dimension(100, 40));
         navigation.add(addButton);
 
@@ -78,8 +79,8 @@ public class Basket extends JFrame {
 
     public static JPanel createServerBox(String name, String version) {
         JPanel box = new JPanel(new BorderLayout());
-        box.setPreferredSize(new Dimension(550, 100));
-        box.setMaximumSize(new Dimension(550, 100));
+        box.setPreferredSize(new Dimension(550, 75));
+        box.setMaximumSize(new Dimension(550, 75));
         box.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 
         JPanel left = new JPanel();
@@ -92,11 +93,13 @@ public class Basket extends JFrame {
         JLabel statusLabel1 = new JLabel("준비됨");
         statusLabel1.setForeground(Color.GRAY);
         statusLabel1.setFont(new Font("Monospaced", Font.PLAIN, 9));
+        statusLabel1.setPreferredSize(new Dimension(200, 12)); // 폭/높이 고정
         left.add(statusLabel1);
 
         JLabel statusLabel2 = new JLabel("");
         statusLabel2.setForeground(Color.GRAY);
         statusLabel2.setFont(new Font("Monospaced", Font.PLAIN, 9));
+        statusLabel2.setPreferredSize(new Dimension(200, 12)); // 폭/높이 고정
         left.add(statusLabel2);
 
         serverStatusLabels.put(name, statusLabel1);
@@ -104,7 +107,9 @@ public class Basket extends JFrame {
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton launchButton = new JButton(resizeIcon(loadIcon("/resources/play.png"), 24, 24));
+        launchButton.setFocusPainted(false);        // 포커스 표시 제거
         JButton editButton = new JButton(resizeIcon(loadIcon("/resources/edit.png"), 24, 24));
+        editButton.setFocusPainted(false);        // 포커스 표시 제거
 
         // 실행 버튼 클릭 이벤트
         launchButton.addActionListener(e -> {
@@ -154,6 +159,7 @@ public class Basket extends JFrame {
 
         // 삭제 버튼을 오른쪽에 배치
         JButton deleteButton = new JButton("서버 삭제");
+        deleteButton.setFocusPainted(false);        // 포커스 표시 제거
         deleteButton.setBackground(Color.RED);
         deleteButton.setForeground(Color.WHITE);
         deleteButton.addActionListener(e -> {
@@ -203,6 +209,7 @@ public class Basket extends JFrame {
         commandField.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
         JButton sendButton = new JButton("전송");
+        sendButton.setFocusPainted(false);        // 포커스 표시 제거
 
         ActionListener sendCommand = e -> {
             String command = commandField.getText().trim();
@@ -331,7 +338,7 @@ public class Basket extends JFrame {
             runningServers.put(serverName, process);
 
             // 버튼 아이콘을 정지 아이콘으로 변경 (임시로 텍스트 사용)
-            launchButton.setText("■");
+            launchButton.setIcon(resizeIcon(loadIcon("/resources/stop.png"), 24, 24));
             launchButton.setToolTipText("서버 중지");
 
             updateServerStatus(serverName, "서버 시작 중...", "");
@@ -452,12 +459,14 @@ public class Basket extends JFrame {
         JLabel statusLabel2 = serverStatusLabels2.get(serverName);
 
         if (statusLabel1 != null) {
-            statusLabel1.setText(status1);
+            String shortStatus1 = status1 != null && status1.length() > 30 ? status1.substring(0, 27) + "..." : status1;
+            statusLabel1.setText(shortStatus1);
             statusLabel1.setToolTipText(status1);
         }
 
         if (statusLabel2 != null) {
-            statusLabel2.setText(status2);
+            String shortStatus2 = status2 != null && status2.length() > 30 ? status2.substring(0, 27) + "..." : status2;
+            statusLabel2.setText(shortStatus2);
             statusLabel2.setToolTipText(status2);
         }
     }

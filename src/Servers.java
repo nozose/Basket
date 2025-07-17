@@ -24,17 +24,20 @@ public class Servers {
     // 저장할 임시 데이터
     private String selectedVersion = null;
     private String serverName = "";
-    private String selectedLauncher = "paper";
+    private String selectedLauncher = "Paper";
     private boolean agreedEula = false;
+    public boolean openPortChecked = false; // 포트 개방 체크박스 상태 저장
 
     private Basket.ServerCreationCallback callback;
 
+    /*서버를 서버 창에 추가하는 함수*/
     public void addServerBox(JPanel box) {
         servers.add(box);
         servers.revalidate();
         servers.repaint();
     }
 
+    /*서버를 서버 창에서 제거하는 함수*/
     public void removeServerBox(JPanel serverBox) {
         servers.remove(serverBox);
         servers.revalidate();
@@ -46,8 +49,7 @@ public class Servers {
 
     private void updateServersSize() {
         int componentCount = servers.getComponentCount();
-        int height = componentCount * 110; // 각 서버 박스 높이 + 여백
-        servers.setPreferredSize(new Dimension(580, height));
+        servers.setPreferredSize(new Dimension(580, componentCount));
     }
 
     public Servers() {
@@ -98,7 +100,9 @@ public class Servers {
 
         JPanel navigation = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         JButton previous = new JButton("이전");
+        previous.setFocusPainted(false);        // 포커스 표시 제거
         nextButton = new JButton("다음");
+        nextButton.setFocusPainted(false);        // 포커스 표시 제거
         previous.setEnabled(false);
 
         navigation.add(previous);
@@ -150,13 +154,20 @@ public class Servers {
 
         // PaperMC 버튼 생성 (정사각형, 이미지 포함, 라디오 버튼 역할)
         JToggleButton paperButton = createLauncherButton("Paper", "/resources/papermc.png");
-        paperButton.setActionCommand("paper");
+        paperButton.setActionCommand("Paper");
         paperButton.setSelected(true);
 
         group.add(paperButton);
         gridPanel.add(paperButton);
 
         panel.add(gridPanel);
+
+        // 포트 개방 체크박스 추가
+        JCheckBox openPortCheckBox = new JCheckBox("포트 개방");
+        openPortCheckBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+        openPortCheckBox.addActionListener(e -> openPortChecked = openPortCheckBox.isSelected());
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(openPortCheckBox);
 
         return panel;
     }
@@ -348,21 +359,18 @@ public class Servers {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JLabel titleLabel = new JLabel("서버 설정 요약");
+        JLabel titleLabel = new JLabel("서버 설정 확인");
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
 
-        JLabel versionLabel = new JLabel("버전: " + selectedVersion);
+        JLabel versionLabel = new JLabel(selectedVersion);
         versionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel nameLabel = new JLabel("서버 이름: " + serverName);
+        JLabel nameLabel = new JLabel(serverName);
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel launcherLabel = new JLabel("실행기: " + selectedLauncher);
+        JLabel launcherLabel = new JLabel(selectedLauncher);
         launcherLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel eulaLabel = new JLabel("EULA 동의: " + (agreedEula ? "예" : "아니오"));
-        eulaLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         panel.add(Box.createVerticalGlue());
         panel.add(titleLabel);
@@ -373,7 +381,6 @@ public class Servers {
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
         panel.add(launcherLabel);
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(eulaLabel);
         panel.add(Box.createVerticalGlue());
 
         return panel;
