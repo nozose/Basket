@@ -182,6 +182,7 @@ public class Basket extends JFrame {
         infoPanel.add(deleteButton, BorderLayout.EAST);
 
         // 콘솔 출력 영역
+
         JTextArea consoleArea = new JTextArea();
         consoleArea.setEditable(false);
         consoleArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
@@ -191,10 +192,21 @@ public class Basket extends JFrame {
         consoleScrollPane.setBorder(BorderFactory.createTitledBorder("콘솔 출력"));
         consoleScrollPane.setPreferredSize(new Dimension(680, 300));
 
+        File logFile = new File("servers/" + serverName + "/console.log");
+        if (logFile.exists()) {
+            try (BufferedReader logReader = new BufferedReader(new FileReader(logFile))) {
+                String logLine;
+                while ((logLine = logReader.readLine()) != null) {
+                    consoleArea.append(logLine + "\n");
+                }
+            } catch (IOException e) {
+                consoleArea.append("로그 파일 읽기 실패: " + e.getMessage() + "\n");
+            }
+        }
+
         // 콘솔에 현재 상태 표시
         Process currentProcess = runningServers.get(serverName);
         if (currentProcess != null && currentProcess.isAlive()) {
-            consoleArea.append("서버가 실행 중입니다...\n");
         } else {
             consoleArea.append("서버가 중지되어 있습니다.\n");
         }
@@ -330,6 +342,12 @@ public class Basket extends JFrame {
         }
 
         try {
+            // ✅ 로그 초기화: 서버 시작 전에 console.log 파일을 비움
+            File logFile = new File(serverDir, "console.log");
+            if (logFile.exists()) {
+                new PrintWriter(logFile).close(); // 파일 내용 비움
+            }
+
             ProcessBuilder pb = new ProcessBuilder("java", "-jar", "paper.jar", "nogui");
             pb.directory(serverDir);
             pb.redirectErrorStream(true);
@@ -337,13 +355,11 @@ public class Basket extends JFrame {
             Process process = pb.start();
             runningServers.put(serverName, process);
 
-            // 버튼 아이콘을 정지 아이콘으로 변경 (임시로 텍스트 사용)
+            // 나머지 기존 로직 그대로 유지
             launchButton.setIcon(resizeIcon(loadIcon("/resources/stop.png"), 24, 24));
             launchButton.setToolTipText("서버 중지");
-
             updateServerStatus(serverName, "서버 시작 중...", "");
 
-            // 별도 스레드에서 서버 출력 모니터링
             new Thread(() -> monitorServerOutput(serverName, process, launchButton)).start();
 
         } catch (IOException e) {
@@ -380,25 +396,30 @@ public class Basket extends JFrame {
     }
 
     private static void monitorServerOutput(String serverName, Process process, JButton launchButton) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+        File logFile = new File("servers/" + serverName + "/console.log");
+
+        try (
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                BufferedWriter logWriter = new BufferedWriter(new FileWriter(logFile, true))
+        ) {
             String line;
             String[] lastTwoLines = {"", ""};
 
             while ((line = reader.readLine()) != null && process.isAlive()) {
-                // 마지막 2줄 업데이트
                 lastTwoLines[0] = lastTwoLines[1];
                 lastTwoLines[1] = line;
 
-                // UI 업데이트는 EDT에서 실행
+                // 로그 저장
+                logWriter.write(line + "\n");
+                logWriter.flush();
+
                 final String finalLine = line;
                 final String[] finalLastTwoLines = lastTwoLines.clone();
                 SwingUtilities.invokeLater(() -> {
-                    // 로그 라인에서 시간 정보 제거하고 중요한 정보만 표시
                     String cleanLine1 = cleanLogLine(finalLastTwoLines[0]);
                     String cleanLine2 = cleanLogLine(finalLastTwoLines[1]);
                     updateServerStatus(serverName, cleanLine1, cleanLine2);
 
-                    // 콘솔 창이 열려있으면 거기에도 출력
                     JTextArea consoleArea = serverConsoleAreas.get(serverName);
                     if (consoleArea != null) {
                         consoleArea.append(finalLine + "\n");
@@ -407,7 +428,6 @@ public class Basket extends JFrame {
                 });
             }
 
-            // 프로세스 종료 후 정리
             SwingUtilities.invokeLater(() -> {
                 runningServers.remove(serverName);
                 launchButton.setIcon(resizeIcon(loadIcon("/resources/play.png"), 24, 24));
@@ -415,7 +435,6 @@ public class Basket extends JFrame {
                 launchButton.setToolTipText("서버 시작");
                 updateServerStatus(serverName, "서버 중지됨", "");
 
-                // 콘솔 창에 종료 메시지
                 JTextArea consoleArea = serverConsoleAreas.get(serverName);
                 if (consoleArea != null) {
                     consoleArea.append("서버가 중지되었습니다.\n");

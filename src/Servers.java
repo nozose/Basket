@@ -26,7 +26,6 @@ public class Servers {
     private String serverName = "";
     private String selectedLauncher = "Paper";
     private boolean agreedEula = false;
-    public boolean openPortChecked = false; // 포트 개방 체크박스 상태 저장
 
     private Basket.ServerCreationCallback callback;
 
@@ -161,13 +160,6 @@ public class Servers {
         gridPanel.add(paperButton);
 
         panel.add(gridPanel);
-
-        // 포트 개방 체크박스 추가
-        JCheckBox openPortCheckBox = new JCheckBox("포트 개방");
-        openPortCheckBox.setAlignmentX(Component.CENTER_ALIGNMENT);
-        openPortCheckBox.addActionListener(e -> openPortChecked = openPortCheckBox.isSelected());
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(openPortCheckBox);
 
         return panel;
     }
