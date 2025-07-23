@@ -290,6 +290,12 @@ public class Basket extends JFrame {
                 servers.removeServerBox(serverBox); // Servers 클래스에 removeServerBox 메소드 필요
                 serverBoxes.remove(serverName);
 
+                // serversPanel preferred size 초기화
+                JPanel serversPanel = servers.getServers();
+                serversPanel.setPreferredSize(null); // preferredSize 리셋으로 레이아웃 재계산
+                serversPanel.revalidate();
+                serversPanel.repaint();
+
                 // 메인 프레임 새로고침
                 JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(serverBox);
                 if (mainFrame != null) {

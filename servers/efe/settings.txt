@@ -1,4 +1,0 @@
-name=efe
-version=1.21.7
-launcher=Paper
-eula=true
