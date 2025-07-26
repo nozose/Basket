@@ -397,10 +397,12 @@ public class Basket extends JFrame {
             Process process = pb.start();
             runningServers.put(serverName, process);
 
-            // 나머지 기존 로직 그대로 유지
-            launchButton.setIcon(resizeIcon(loadIcon("/resources/play.png"), 24, 24));
-            launchButton.setToolTipText("서버 중지");
-            updateServerStatus(serverName, "서버 시작 중...", "");
+            // ✅ 수정: 서버 시작 시 버튼을 정지 버튼으로 변경
+            SwingUtilities.invokeLater(() -> {
+                launchButton.setIcon(resizeIcon(loadIcon("/resources/stop.png"), 24, 24));
+                launchButton.setToolTipText("서버 중지");
+                updateServerStatus(serverName, "서버 시작 중...", "");
+            });
 
             new Thread(() -> monitorServerOutput(serverName, process, launchButton)).start();
 
