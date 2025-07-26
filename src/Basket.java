@@ -134,6 +134,17 @@ public class Basket extends JFrame {
         return box;
     }
 
+    // 서버 디렉토리를 가져오는 헬퍼 메서드 추가
+    private static File getServerDirectory(String serverName) {
+        String sanitizedName = sanitizeFileName(serverName);
+        return new File("servers", sanitizedName);
+    }
+
+    // 로그 파일을 가져오는 헬퍼 메서드 추가
+    private static File getLogFile(String serverName) {
+        return new File(getServerDirectory(serverName), "console.log");
+    }
+
     private static void openServerManageFrame(String serverName, String version) {
         // 이미 열린 창이 있으면 포커스만 주기
         if (serverManageFrames.containsKey(serverName)) {
@@ -148,20 +159,11 @@ public class Basket extends JFrame {
         manageFrame.setLocationRelativeTo(null);
         manageFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        // 상단 정보 패널 - BorderLayout으로 변경
-        JPanel infoPanel = new JPanel(new BorderLayout());
-        infoPanel.setBorder(BorderFactory.createTitledBorder("서버 정보"));
-
-        // 왼쪽에 서버 정보 표시
-        JPanel leftInfo = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        leftInfo.add(new JLabel("" + serverName));
-        leftInfo.add(new JLabel("     " + version));
-
-        // 서버 폴더 열기 버튼
+        // 서버 폴더 열기 버튼 업데이트 - getServerDirectory 사용
         JButton openFolder = new JButton("폴더 열기");
         openFolder.setFocusPainted(false);
         openFolder.addActionListener(e -> {
-            File serverFolder = new File("servers/" + serverName);
+            File serverFolder = getServerDirectory(serverName);
             if (serverFolder.exists()) {
                 try {
                     Desktop.getDesktop().open(serverFolder);
@@ -178,6 +180,15 @@ public class Basket extends JFrame {
                         JOptionPane.WARNING_MESSAGE);
             }
         });
+
+        // 상단 정보 패널 - BorderLayout으로 변경
+        JPanel infoPanel = new JPanel(new BorderLayout());
+        infoPanel.setBorder(BorderFactory.createTitledBorder("서버 정보"));
+
+        // 왼쪽에 서버 정보 표시
+        JPanel leftInfo = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftInfo.add(new JLabel("" + serverName));
+        leftInfo.add(new JLabel("     " + version));
 
         // 삭제 버튼
         JButton deleteButton = new JButton("서버 삭제");
@@ -218,7 +229,8 @@ public class Basket extends JFrame {
         consoleScrollPane.setBorder(BorderFactory.createTitledBorder("콘솔 출력"));
         consoleScrollPane.setPreferredSize(new Dimension(680, 300));
 
-        File logFile = new File("servers/" + serverName + "/console.log");
+        // 수정: getLogFile 메서드 사용
+        File logFile = getLogFile(serverName);
         if (logFile.exists()) {
             try (BufferedReader logReader = new BufferedReader(new FileReader(logFile))) {
                 String logLine;
@@ -303,26 +315,24 @@ public class Basket extends JFrame {
             runningServers.remove(serverName);
         }
 
-        // 서버 폴더 삭제
-        File serverDir = new File("servers", serverName);
+        // 서버 폴더 삭제 - getServerDirectory 사용
+        File serverDir = getServerDirectory(serverName);
         if (serverDir.exists()) {
             deleteDirectory(serverDir);
         }
 
-        // UI에서 서버 박스 즉시 제거
+        // 나머지 UI 정리 로직은 동일...
         JPanel serverBox = serverBoxes.get(serverName);
         if (serverBox != null && servers != null) {
             SwingUtilities.invokeLater(() -> {
-                servers.removeServerBox(serverBox); // Servers 클래스에 removeServerBox 메소드 필요
+                servers.removeServerBox(serverBox);
                 serverBoxes.remove(serverName);
 
-                // serversPanel preferred size 초기화
                 JPanel serversPanel = servers.getServers();
-                serversPanel.setPreferredSize(null); // preferredSize 리셋으로 레이아웃 재계산
+                serversPanel.setPreferredSize(null);
                 serversPanel.revalidate();
                 serversPanel.repaint();
 
-                // 메인 프레임 새로고침
                 JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(serverBox);
                 if (mainFrame != null) {
                     mainFrame.revalidate();
@@ -343,7 +353,7 @@ public class Basket extends JFrame {
             serverManageFrames.remove(serverName);
         }
 
-        // 성공 메시지 (재시작 불필요)
+        // 성공 메시지
         JOptionPane.showMessageDialog(null,
                 "서버 '" + serverName + "'이(가) 삭제되었습니다.",
                 "서버 삭제 완료",
@@ -365,7 +375,7 @@ public class Basket extends JFrame {
     }
 
     private static void startServer(String serverName, JButton launchButton) {
-        File serverDir = new File("servers", serverName);
+        File serverDir = getServerDirectory(serverName);
         File paperJar = new File(serverDir, "paper.jar");
 
         if (!paperJar.exists()) {
@@ -374,8 +384,8 @@ public class Basket extends JFrame {
         }
 
         try {
-            // ✅ 로그 초기화: 서버 시작 전에 console.log 파일을 비움
-            File logFile = new File(serverDir, "console.log");
+            // ✅ 로그 초기화: 서버 시작 전에 console.log 파일을 비움 - getLogFile 사용
+            File logFile = getLogFile(serverName);
             if (logFile.exists()) {
                 new PrintWriter(logFile).close(); // 파일 내용 비움
             }
@@ -388,7 +398,7 @@ public class Basket extends JFrame {
             runningServers.put(serverName, process);
 
             // 나머지 기존 로직 그대로 유지
-            launchButton.setIcon(resizeIcon(loadIcon("/resources/stop.png"), 24, 24));
+            launchButton.setIcon(resizeIcon(loadIcon("/resources/play.png"), 24, 24));
             launchButton.setToolTipText("서버 중지");
             updateServerStatus(serverName, "서버 시작 중...", "");
 
@@ -428,7 +438,8 @@ public class Basket extends JFrame {
     }
 
     private static void monitorServerOutput(String serverName, Process process, JButton launchButton) {
-        File logFile = new File("servers/" + serverName + "/console.log");
+        // 수정: getLogFile 메서드 사용
+        File logFile = getLogFile(serverName);
 
         try (
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -539,13 +550,17 @@ public class Basket extends JFrame {
     }
 
     public static void saveServerConfig(String name, String version, String launcher, String eula) {
-        File serverDir = new File("servers", name);
+        // Sanitize the name to remove invalid characters for Windows file system
+        String sanitizedName = sanitizeFileName(name);
+
+        File serverDir = new File("servers", sanitizedName);
         if (!serverDir.exists()) serverDir.mkdirs();
 
         File settingsFile = new File(serverDir, "settings.txt");
 
         try (PrintWriter writer = new PrintWriter(settingsFile)) {
-            writer.println("name=" + name);
+            writer.println("name=" + name); // Keep original name in settings
+            writer.println("sanitized_name=" + sanitizedName); // Store sanitized name for reference
             writer.println("version=" + version);
             writer.println("launcher=" + launcher);
             writer.println("eula=" + eula);
@@ -565,6 +580,53 @@ public class Basket extends JFrame {
                 System.err.println("Paper 실행기 다운로드 실패: " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Sanitizes a filename by replacing invalid characters with underscores
+     * @param fileName the original filename
+     * @return sanitized filename safe for Windows file system
+     */
+    private static String sanitizeFileName(String fileName) {
+        if (fileName == null) return "server";
+
+        // Windows와 일부 OS에서 허용되지 않는 문자 목록:
+        // \ / : * ? " < > | 및 제어 문자, ! 등
+        String sanitized = fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        // 제어 문자 (0x00~0x1F) 제거
+        sanitized = sanitized.replaceAll("[\\x00-\\x1F]", "_");
+
+        // 끝에 오는 공백 및 마침표 제거 (Windows 제한사항)
+        sanitized = sanitized.replaceAll("[.\\s]+$", "");
+
+        // 이름이 비었거나 예약된 이름일 경우 대체
+        if (sanitized.isEmpty() || isReservedName(sanitized)) {
+            sanitized = "server_" + System.currentTimeMillis();
+        }
+
+        // 최대 길이 제한 (일반적으로 255자 이하, 안전하게 100자 제한)
+        if (sanitized.length() > 100) {
+            sanitized = sanitized.substring(0, 100);
+        }
+
+        return sanitized;
+    }
+
+    /**
+     * Checks if a name is reserved in Windows
+     */
+    private static boolean isReservedName(String name) {
+        String[] reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+                "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
+                "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
+
+        for (String res : reserved) {
+            if (res.equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void createEulaFile(File serverDir, String eulaAccepted) {

@@ -3,12 +3,16 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import org.json.*;
 
 public class Servers {
@@ -20,6 +24,7 @@ public class Servers {
     private JPanel eulaPanel;
     private JTextField nameField;
     private JButton nextButton;
+    private JLabel warningLabel; // 경고 메시지용 라벨 추가
 
     // 저장할 임시 데이터
     private String selectedVersion = null;
@@ -67,6 +72,42 @@ public class Servers {
 
     public JPanel getServers() {
         return container;
+    }
+
+    // 기존 서버 이름들을 가져오는 메서드
+    private Set<String> getExistingServerNames() {
+        Set<String> existingNames = new HashSet<>();
+        File serversDir = new File("servers");
+
+        if (!serversDir.exists()) {
+            return existingNames;
+        }
+
+        File[] serverDirs = serversDir.listFiles(File::isDirectory);
+        if (serverDirs == null) {
+            return existingNames;
+        }
+
+        for (File serverDir : serverDirs) {
+            File settingsFile = new File(serverDir, "settings.txt");
+            if (settingsFile.exists()) {
+                try (BufferedReader reader = new BufferedReader(new FileReader(settingsFile))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith("name=")) {
+                            String name = line.substring(5);
+                            existingNames.add(name);
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    // 파일 읽기 실패 시 폴더명 사용
+                    existingNames.add(serverDir.getName());
+                }
+            }
+        }
+
+        return existingNames;
     }
 
     public void addServerComponent(Basket.ServerCreationCallback callback) {
@@ -285,6 +326,12 @@ public class Servers {
         nameField.setAlignmentX(Component.CENTER_ALIGNMENT);
         nameField.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
+        // 경고 메시지 라벨 추가
+        warningLabel = new JLabel("");
+        warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        warningLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        warningLabel.setForeground(Color.RED);
+
         nameField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void changedUpdate(javax.swing.event.DocumentEvent e) { validateName(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e) { validateName(); }
@@ -292,7 +339,18 @@ public class Servers {
 
             public void validateName() {
                 serverName = nameField.getText().trim();
-                nextButton.setEnabled(!serverName.isEmpty());
+                Set<String> existingServers = getExistingServerNames();
+
+                if (serverName.isEmpty()) {
+                    warningLabel.setText("");
+                    nextButton.setEnabled(false);
+                } else if (existingServers.contains(serverName)) {
+                    warningLabel.setText("이미 존재하는 서버 이름입니다.");
+                    nextButton.setEnabled(false);
+                } else {
+                    warningLabel.setText("");
+                    nextButton.setEnabled(true);
+                }
             }
         });
 
@@ -300,6 +358,8 @@ public class Servers {
         panel.add(label);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(nameField);
+        panel.add(Box.createRigidArea(new Dimension(0, 5))); // 경고 메시지와의 간격
+        panel.add(warningLabel);
         panel.add(Box.createVerticalGlue());
 
         return panel;
@@ -394,7 +454,22 @@ public class Servers {
                 frame.add(setNamePanel, BorderLayout.CENTER);
                 previous.setEnabled(true);
                 next.setText("다음");
-                next.setEnabled(!nameField.getText().trim().isEmpty());
+                // 이름 패널로 돌아올 때 검증 다시 실행
+                SwingUtilities.invokeLater(() -> {
+                    String currentName = nameField.getText().trim();
+                    Set<String> existingServers = getExistingServerNames();
+
+                    if (currentName.isEmpty()) {
+                        warningLabel.setText("");
+                        next.setEnabled(false);
+                    } else if (existingServers.contains(currentName)) {
+                        warningLabel.setText("이미 존재하는 서버 이름입니다.");
+                        next.setEnabled(false);
+                    } else {
+                        warningLabel.setText("");
+                        next.setEnabled(true);
+                    }
+                });
                 break;
             case 3:
                 label.setText("실행기");
