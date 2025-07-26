@@ -157,9 +157,31 @@ public class Basket extends JFrame {
         leftInfo.add(new JLabel("" + serverName));
         leftInfo.add(new JLabel("     " + version));
 
-        // 삭제 버튼을 오른쪽에 배치
+        // 서버 폴더 열기 버튼
+        JButton openFolder = new JButton("폴더 열기");
+        openFolder.setFocusPainted(false);
+        openFolder.addActionListener(e -> {
+            File serverFolder = new File("servers/" + serverName);
+            if (serverFolder.exists()) {
+                try {
+                    Desktop.getDesktop().open(serverFolder);
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(manageFrame,
+                            "폴더를 여는 중 오류가 발생했습니다: " + ex.getMessage(),
+                            "오류",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(manageFrame,
+                        "서버 폴더를 찾을 수 없습니다.",
+                        "폴더 없음",
+                        JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        // 삭제 버튼
         JButton deleteButton = new JButton("서버 삭제");
-        deleteButton.setFocusPainted(false);        // 포커스 표시 제거
+        deleteButton.setFocusPainted(false);
         deleteButton.setBackground(Color.RED);
         deleteButton.setForeground(Color.WHITE);
         deleteButton.addActionListener(e -> {
@@ -177,12 +199,16 @@ public class Basket extends JFrame {
             }
         });
 
+        // 오른쪽에 두 버튼을 담을 패널 생성
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        rightPanel.add(openFolder);
+        rightPanel.add(deleteButton);
+
         // 레이아웃에 추가
         infoPanel.add(leftInfo, BorderLayout.WEST);
-        infoPanel.add(deleteButton, BorderLayout.EAST);
+        infoPanel.add(rightPanel, BorderLayout.EAST);
 
         // 콘솔 출력 영역
-
         JTextArea consoleArea = new JTextArea();
         consoleArea.setEditable(false);
         consoleArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
@@ -221,7 +247,7 @@ public class Basket extends JFrame {
         commandField.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
         JButton sendButton = new JButton("전송");
-        sendButton.setFocusPainted(false);        // 포커스 표시 제거
+        sendButton.setFocusPainted(false);
 
         ActionListener sendCommand = e -> {
             String command = commandField.getText().trim();

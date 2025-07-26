@@ -1,3 +1,5 @@
 # Basket
 
-## 개미도 열수 있는 마인크래프트 서버
+## Minecraft 서버 실행기
+Vibe-coded Program via Claude / ChatGPT
+
