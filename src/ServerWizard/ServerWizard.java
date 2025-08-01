@@ -1,3 +1,5 @@
+package ServerWizard;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
@@ -23,9 +25,13 @@ public class ServerWizard {
     private String selectedLauncher = "Paper";
     private boolean agreedEula = false;
 
-    private Basket.ServerCreationCallback callback;
+    private ServerCreationCallback callback;
 
-    public void showWizard(Basket.ServerCreationCallback callback) {
+    public interface ServerCreationCallback {
+        void onServerCreated(String name, String version, String launcher, Boolean eula);
+    }
+
+    public void showWizard(ServerCreationCallback callback) {
         this.callback = callback;
         final int[] current = {1};
 
@@ -35,13 +41,11 @@ public class ServerWizard {
         wizardFrame.setResizable(false);
         wizardFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        // 창이 닫힐 때 addButton을 다시 활성화
+        // 창이 닫힐 때 부모의 addButton을 다시 활성화하기 위해 콜백 호출
         wizardFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
-                if (Basket.addButton != null) {
-                    Basket.addButton.setEnabled(true);
-                }
+                // 부모 창의 addButton 재활성화는 부모에서 처리하도록 함
             }
         });
 

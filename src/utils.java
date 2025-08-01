@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -10,7 +11,7 @@ import org.json.*;
 
 public class utils {
 
-    // ===== UI 컴포넌트 생성 관련 =====
+    // ===== UI 컴포넌트 생성 블록들 =====
 
     public static JButton createTextButton(Integer width, Integer height, String text) {
         JButton button = new JButton(text);
@@ -26,52 +27,446 @@ public class utils {
         return button;
     }
 
-    public static JToggleButton createLauncherButton(String name, String imagePath) {
-        JToggleButton button = new JToggleButton();
-        button.setPreferredSize(new Dimension(120, 120));
-        button.setLayout(new BorderLayout());
-        button.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-        button.setFocusPainted(false);
+    public static JPanel createNavigationPanel(int width, int height, JButton... buttons) {
+        JPanel navigation = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        navigation.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.BLACK));
+        navigation.setPreferredSize(new Dimension(width, height));
 
-        JLabel imageLabel = new JLabel();
-        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
-        try {
-            ImageIcon icon = new ImageIcon(utils.class.getResource(imagePath));
-            Image scaled = icon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
-            imageLabel.setIcon(new ImageIcon(scaled));
-        } catch (Exception e) {
-            imageLabel.setText("[이미지 없음]");
+        for (JButton button : buttons) {
+            navigation.add(button);
         }
 
-        JLabel nameLabel = new JLabel(name, SwingConstants.CENTER);
-        nameLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-
-        JPanel innerPanel = new JPanel();
-        innerPanel.setLayout(new BoxLayout(innerPanel, BoxLayout.Y_AXIS));
-        innerPanel.setOpaque(false);
-        imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        innerPanel.add(Box.createVerticalGlue());
-        innerPanel.add(imageLabel);
-        innerPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-        innerPanel.add(nameLabel);
-        innerPanel.add(Box.createVerticalGlue());
-
-        button.add(innerPanel, BorderLayout.CENTER);
-
-        button.addChangeListener(e -> {
-            if (button.isSelected()) {
-                button.setBorder(BorderFactory.createLineBorder(new Color(100, 149, 237), 2));
-            } else {
-                button.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-            }
-        });
-
-        return button;
+        return navigation;
     }
 
+    public static JScrollPane createScrollPane(JComponent component, boolean horizontalScroll, boolean verticalScroll) {
+        JScrollPane scrollPane = new JScrollPane(component);
+        scrollPane.setBorder(null);
+        scrollPane.setWheelScrollingEnabled(true);
+        scrollPane.setHorizontalScrollBarPolicy(horizontalScroll ?
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED : JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(verticalScroll ?
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED : JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(8);
+        return scrollPane;
+    }
 
+    public static JFrame createMainFrame(String title, int width, int height, JComponent... components) {
+        JFrame frame = new JFrame(title);
+        frame.setSize(width, height);
+        frame.setLocationRelativeTo(null);
+        frame.setResizable(false);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
+        if (components.length >= 1) frame.add(components[0], BorderLayout.NORTH);
+        if (components.length >= 2) frame.add(components[1], BorderLayout.CENTER);
+        if (components.length >= 3) frame.add(components[2], BorderLayout.SOUTH);
+
+        return frame;
+    }
+
+    // ===== 서버 박스 생성 블록들 =====
+
+    public static JPanel createServerBox(String name, String version,
+                                         ConcurrentHashMap<String, JLabel> statusLabels1,
+                                         ConcurrentHashMap<String, JLabel> statusLabels2,
+                                         ActionListener launchAction,
+                                         ActionListener editAction) {
+        JPanel box = new JPanel(new BorderLayout());
+        box.setPreferredSize(new Dimension(550, 75));
+        box.setMaximumSize(new Dimension(550, 75));
+        box.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+
+        JPanel leftPanel = createServerInfoPanel(name, version, statusLabels1, statusLabels2);
+        JPanel rightPanel = createServerControlPanel(launchAction, editAction);
+
+        box.add(leftPanel, BorderLayout.WEST);
+        box.add(rightPanel, BorderLayout.EAST);
+
+        return box;
+    }
+
+    public static JPanel createServerInfoPanel(String name, String version,
+                                               ConcurrentHashMap<String, JLabel> statusLabels1,
+                                               ConcurrentHashMap<String, JLabel> statusLabels2) {
+        JPanel left = new JPanel();
+        left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
+        left.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
+
+        left.add(new JLabel(name));
+        left.add(new JLabel(version));
+
+        JLabel statusLabel1 = createStatusLabel("준비됨");
+        JLabel statusLabel2 = createStatusLabel("");
+
+        left.add(statusLabel1);
+        left.add(statusLabel2);
+
+        statusLabels1.put(name, statusLabel1);
+        statusLabels2.put(name, statusLabel2);
+
+        return left;
+    }
+
+    public static JLabel createStatusLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setForeground(Color.GRAY);
+        label.setFont(new Font("Monospaced", Font.PLAIN, 9));
+        label.setPreferredSize(new Dimension(200, 12));
+        return label;
+    }
+
+    public static JPanel createServerControlPanel(ActionListener launchAction, ActionListener editAction) {
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        JButton launchButton = createImageButton(30, 30, "/resources/play.png");
+        JButton editButton = createImageButton(30, 30, "/resources/edit.png");
+
+        launchButton.addActionListener(launchAction);
+        editButton.addActionListener(editAction);
+
+        right.add(launchButton);
+        right.add(editButton);
+
+        return right;
+    }
+
+    // ===== 서버 프로세스 관리 블록들 =====
+
+    public static Process startServerProcess(String serverName) throws IOException {
+        File serverDir = getServerDirectory(serverName);
+        File paperJar = new File(serverDir, "paper.jar");
+
+        if (!paperJar.exists()) {
+            throw new FileNotFoundException("paper.jar 파일이 없습니다");
+        }
+
+        // 로그 파일 초기화
+        File logFile = getLogFile(serverName);
+        if (logFile.exists()) {
+            new PrintWriter(logFile).close();
+        }
+
+        ProcessBuilder pb = new ProcessBuilder("java", "-jar", "paper.jar", "nogui");
+        pb.directory(serverDir);
+        pb.redirectErrorStream(true);
+
+        return pb.start();
+    }
+
+    public static void stopServerProcess(Process process) {
+        if (process != null && process.isAlive()) {
+            try {
+                OutputStreamWriter writer = new OutputStreamWriter(process.getOutputStream());
+                writer.write("stop\n");
+                writer.flush();
+
+                // 5초 후 강제 종료
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(5000);
+                        if (process.isAlive()) {
+                            process.destroyForcibly();
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }).start();
+
+            } catch (IOException e) {
+                process.destroyForcibly();
+            }
+        }
+    }
+
+    public static void monitorServerOutput(String serverName, Process process,
+                                           ConcurrentHashMap<String, JLabel> statusLabels1,
+                                           ConcurrentHashMap<String, JLabel> statusLabels2,
+                                           ConcurrentHashMap<String, JTextArea> consoleAreas,
+                                           Runnable onProcessEnd) {
+        File logFile = getLogFile(serverName);
+
+        new Thread(() -> {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                 BufferedWriter logWriter = new BufferedWriter(new FileWriter(logFile, true))) {
+
+                String line;
+                String[] lastTwoLines = {"", ""};
+
+                while ((line = reader.readLine()) != null && process.isAlive()) {
+                    lastTwoLines[0] = lastTwoLines[1];
+                    lastTwoLines[1] = line;
+
+                    logWriter.write(line + "\n");
+                    logWriter.flush();
+
+                    final String finalLine = line;
+                    final String[] finalLastTwoLines = lastTwoLines.clone();
+
+                    SwingUtilities.invokeLater(() -> {
+                        String cleanLine1 = cleanLogLine(finalLastTwoLines[0]);
+                        String cleanLine2 = cleanLogLine(finalLastTwoLines[1]);
+                        updateServerStatus(serverName, cleanLine1, cleanLine2, statusLabels1, statusLabels2);
+
+                        JTextArea consoleArea = consoleAreas.get(serverName);
+                        if (consoleArea != null) {
+                            consoleArea.append(finalLine + "\n");
+                            consoleArea.setCaretPosition(consoleArea.getDocument().getLength());
+                        }
+                    });
+                }
+
+                SwingUtilities.invokeLater(onProcessEnd);
+
+            } catch (IOException e) {
+                SwingUtilities.invokeLater(() -> updateServerStatus(serverName, "출력 읽기 실패", "", statusLabels1, statusLabels2));
+            }
+        }).start();
+    }
+
+    public static void sendServerCommand(String serverName, String command,
+                                         ConcurrentHashMap<String, Process> runningServers,
+                                         ConcurrentHashMap<String, JTextArea> consoleAreas) {
+        if (command.trim().isEmpty()) return;
+
+        Process process = runningServers.get(serverName);
+        JTextArea consoleArea = consoleAreas.get(serverName);
+
+        if (process != null && process.isAlive()) {
+            try {
+                OutputStreamWriter writer = new OutputStreamWriter(process.getOutputStream());
+                writer.write(command + "\n");
+                writer.flush();
+
+                if (consoleArea != null) {
+                    consoleArea.append("> " + command + "\n");
+                    consoleArea.setCaretPosition(consoleArea.getDocument().getLength());
+                }
+            } catch (IOException ex) {
+                if (consoleArea != null) {
+                    consoleArea.append("명령어 전송 실패: " + ex.getMessage() + "\n");
+                }
+            }
+        } else {
+            if (consoleArea != null) {
+                consoleArea.append("서버가 실행 중이 아닙니다.\n");
+            }
+        }
+    }
+
+    // ===== 서버 관리 창 생성 블록들 =====
+
+    public static JFrame createServerManageFrame(String serverName, String version) {
+        JFrame manageFrame = new JFrame("서버 관리 - " + serverName);
+        manageFrame.setSize(700, 500);
+        manageFrame.setLocationRelativeTo(null);
+        manageFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        return manageFrame;
+    }
+
+    public static JPanel createServerInfoManagePanel(String serverName, String version,
+                                                     ActionListener openFolderAction,
+                                                     ActionListener deleteAction) {
+        JPanel infoPanel = new JPanel(new BorderLayout());
+        infoPanel.setBorder(BorderFactory.createTitledBorder("서버 정보"));
+
+        JPanel leftInfo = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        leftInfo.add(new JLabel(serverName));
+        leftInfo.add(new JLabel("     " + version));
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        JButton openFolderButton = createTextButton(90, 30, "폴더 열기");
+        openFolderButton.addActionListener(openFolderAction);
+
+        JButton deleteButton = createTextButton(90, 30, "서버 삭제");
+        deleteButton.setBackground(Color.RED);
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.addActionListener(deleteAction);
+
+        rightPanel.add(openFolderButton);
+        rightPanel.add(deleteButton);
+
+        infoPanel.add(leftInfo, BorderLayout.WEST);
+        infoPanel.add(rightPanel, BorderLayout.EAST);
+
+        return infoPanel;
+    }
+
+    public static JScrollPane createConsolePanel(String serverName,
+                                                 ConcurrentHashMap<String, JTextArea> consoleAreas) {
+        JTextArea consoleArea = new JTextArea();
+        consoleArea.setEditable(false);
+        consoleArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        consoleArea.setBackground(Color.BLACK);
+        consoleArea.setForeground(Color.WHITE);
+
+        JScrollPane consoleScrollPane = new JScrollPane(consoleArea);
+        consoleScrollPane.setBorder(BorderFactory.createTitledBorder("콘솔 출력"));
+        consoleScrollPane.setPreferredSize(new Dimension(680, 300));
+
+        loadExistingLogs(serverName, consoleArea);
+        consoleAreas.put(serverName, consoleArea);
+
+        return consoleScrollPane;
+    }
+
+    public static JPanel createCommandPanel(String serverName,
+                                            ConcurrentHashMap<String, Process> runningServers,
+                                            ConcurrentHashMap<String, JTextArea> consoleAreas) {
+        JPanel commandPanel = new JPanel(new BorderLayout());
+        commandPanel.setBorder(BorderFactory.createTitledBorder("명령어"));
+
+        JTextField commandField = new JTextField();
+        commandField.setFont(new Font("Monospaced", Font.PLAIN, 12));
+
+        JButton sendButton = createTextButton(60, 30, "전송");
+
+        ActionListener sendCommand = e -> {
+            String command = commandField.getText().trim();
+            sendServerCommand(serverName, command, runningServers, consoleAreas);
+            commandField.setText("");
+        };
+
+        commandField.addActionListener(sendCommand);
+        sendButton.addActionListener(sendCommand);
+
+        commandPanel.add(commandField, BorderLayout.CENTER);
+        commandPanel.add(sendButton, BorderLayout.EAST);
+
+        return commandPanel;
+    }
+
+    // ===== 서버 삭제 관련 블록들 =====
+
+    public static boolean confirmServerDeletion(String serverName, Component parent) {
+        int confirm = JOptionPane.showConfirmDialog(
+                parent,
+                "정말로 서버 '" + serverName + "'을(를) 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.",
+                "서버 삭제 확인",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        return confirm == JOptionPane.YES_OPTION;
+    }
+
+    public static void deleteServerCompletely(String serverName,
+                                              ConcurrentHashMap<String, Process> runningServers,
+                                              ConcurrentHashMap<String, JLabel> statusLabels1,
+                                              ConcurrentHashMap<String, JLabel> statusLabels2,
+                                              ConcurrentHashMap<String, JTextArea> consoleAreas,
+                                              ConcurrentHashMap<String, JFrame> manageFrames,
+                                              ConcurrentHashMap<String, JPanel> serverBoxes,
+                                              JPanel serversPanel) {
+        // 실행 중인 서버 중지
+        Process process = runningServers.get(serverName);
+        if (process != null && process.isAlive()) {
+            process.destroyForcibly();
+            runningServers.remove(serverName);
+        }
+
+        // 서버 폴더 삭제
+        File serverDir = getServerDirectory(serverName);
+        if (serverDir.exists()) {
+            deleteDirectory(serverDir);
+        }
+
+        // UI에서 서버 제거
+        JPanel serverBox = serverBoxes.get(serverName);
+        if (serverBox != null) {
+            SwingUtilities.invokeLater(() -> {
+                serversPanel.remove(serverBox);
+                serversPanel.revalidate();
+                serversPanel.repaint();
+                serverBoxes.remove(serverName);
+            });
+        }
+
+        // 관련 데이터 정리
+        statusLabels1.remove(serverName);
+        statusLabels2.remove(serverName);
+        consoleAreas.remove(serverName);
+
+        JFrame manageFrame = manageFrames.get(serverName);
+        if (manageFrame != null) {
+            manageFrame.dispose();
+            manageFrames.remove(serverName);
+        }
+
+        JOptionPane.showMessageDialog(null,
+                "서버 '" + serverName + "'이(가) 삭제되었습니다.",
+                "서버 삭제 완료",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public static void openServerFolder(String serverName, Component parent) {
+        File serverFolder = getServerDirectory(serverName);
+        if (serverFolder.exists()) {
+            try {
+                Desktop.getDesktop().open(serverFolder);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(parent,
+                        "폴더를 여는 중 오류가 발생했습니다: " + ex.getMessage(),
+                        "오류",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(parent,
+                    "서버 폴더를 찾을 수 없습니다.",
+                    "폴더 없음",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    // ===== 서버 로딩 관련 블록들 =====
+
+    public static void loadAndCreateSavedServers(JPanel serversPanel,
+                                                 ConcurrentHashMap<String, JPanel> serverBoxes,
+                                                 ConcurrentHashMap<String, JLabel> statusLabels1,
+                                                 ConcurrentHashMap<String, JLabel> statusLabels2,
+                                                 ActionListener launchActionProvider,
+                                                 ActionListener editActionProvider) {
+        File dir = new File("servers");
+        if (!dir.exists()) return;
+
+        File[] serverDirs = dir.listFiles(File::isDirectory);
+        if (serverDirs == null) return;
+
+        for (File serverDir : serverDirs) {
+            File settingsFile = new File(serverDir, "settings.txt");
+            if (!settingsFile.exists()) continue;
+
+            try (BufferedReader reader = new BufferedReader(new FileReader(settingsFile))) {
+                String name = null, version = null;
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("name=")) name = line.substring(5);
+                    if (line.startsWith("version=")) version = line.substring(8);
+                }
+                if (name != null && version != null) {
+                    JPanel serverBox = createServerBox(name, version, statusLabels1, statusLabels2,
+                            launchActionProvider, editActionProvider);
+                    serversPanel.add(serverBox);
+                    serverBoxes.put(name, serverBox);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        serversPanel.revalidate();
+        serversPanel.repaint();
+    }
+
+    public static void setupShutdownHook(ConcurrentHashMap<String, Process> runningServers) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            for (Process process : runningServers.values()) {
+                if (process.isAlive()) {
+                    process.destroyForcibly();
+                }
+            }
+        }));
+    }
 
     // ===== 이미지 관련 유틸리티 =====
 
@@ -91,28 +486,19 @@ public class utils {
         return new ImageIcon(resized);
     }
 
-
-
     // ===== 파일/디렉토리 관련 유틸리티 =====
 
     public static String sanitizeFileName(String fileName) {
         if (fileName == null) return "server";
 
-        // Windows와 일부 OS에서 허용되지 않는 문자 목록 제거
         String sanitized = fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
-
-        // 제어 문자 (0x00~0x1F) 제거
         sanitized = sanitized.replaceAll("[\\x00-\\x1F]", "_");
-
-        // 끝에 오는 공백 및 마침표 제거 (Windows 제한사항)
         sanitized = sanitized.replaceAll("[.\\s]+$", "");
 
-        // 이름이 비었거나 예약된 이름일 경우 대체
         if (sanitized.isEmpty() || isReservedName(sanitized)) {
             sanitized = "server_" + System.currentTimeMillis();
         }
 
-        // 최대 길이 제한 (안전하게 100자 제한)
         if (sanitized.length() > 100) {
             sanitized = sanitized.substring(0, 100);
         }
@@ -156,115 +542,15 @@ public class utils {
         directory.delete();
     }
 
-
-
-    // ===== 네트워크/API 관련 유틸리티 =====
-
-    public static List<String> getMinecraftVersions() throws Exception {
-        URL url = new URL("https://api.papermc.io/v2/projects/paper");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-
-        InputStreamReader reader = new InputStreamReader(conn.getInputStream());
-        StringBuilder sb = new StringBuilder();
-        int ch;
-        while ((ch = reader.read()) != -1) {
-            sb.append((char) ch);
-        }
-
-        JSONObject json = new JSONObject(sb.toString());
-        JSONArray versions = json.getJSONArray("versions");
-
-        List<String> versionList = new ArrayList<>();
-        for (int i = 0; i < versions.length(); i++) {
-            versionList.add(versions.getString(i));
-        }
-
-        // 버전 숫자 기준 내림차순 정렬
-        versionList.sort((v1, v2) -> compareVersions(v2, v1));
-
-        return versionList;
-    }
-
-    public static void downloadLatestPaperJar(String version, File destination) throws Exception {
-        String buildsApiUrl = "https://api.papermc.io/v2/projects/paper/versions/" + version + "/builds";
-        HttpURLConnection conn = (HttpURLConnection) new URL(buildsApiUrl).openConnection();
-        conn.setRequestMethod("GET");
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        StringBuilder response = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            response.append(line);
-        }
-        reader.close();
-
-        JSONObject json = new JSONObject(response.toString());
-        JSONArray builds = json.getJSONArray("builds");
-        if (builds.length() == 0) throw new IOException("해당 버전에 대한 빌드 없음");
-
-        JSONObject latestBuildObj = builds.getJSONObject(builds.length() - 1);
-        int latestBuild = latestBuildObj.getInt("build");
-
-        String jarName = "paper-" + version + "-" + latestBuild + ".jar";
-        String downloadUrl = String.format(
-                "https://api.papermc.io/v2/projects/paper/versions/%s/builds/%d/downloads/%s",
-                version, latestBuild, jarName
-        );
-
-        try (BufferedInputStream in = new BufferedInputStream(new URL(downloadUrl).openStream());
-             FileOutputStream out = new FileOutputStream(destination)) {
-
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer, 0, buffer.length)) != -1) {
-                out.write(buffer, 0, bytesRead);
-            }
-
-            System.out.println("paper.jar 다운로드 완료: " + destination.getAbsolutePath());
-        }
-    }
-
-
-
-    // ===== 버전 비교 관련 유틸리티 =====
-
-    public static int compareVersions(String v1, String v2) {
-        String[] parts1 = v1.split("\\.");
-        String[] parts2 = v2.split("\\.");
-
-        int length = Math.max(parts1.length, parts2.length);
-        for (int i = 0; i < length; i++) {
-            int num1 = i < parts1.length ? parseVersionPart(parts1[i]) : 0;
-            int num2 = i < parts2.length ? parseVersionPart(parts2[i]) : 0;
-            if (num1 != num2) {
-                return Integer.compare(num1, num2);
-            }
-        }
-        return 0;
-    }
-
-    public static int parseVersionPart(String part) {
-        try {
-            return Integer.parseInt(part.replaceAll("\\D.*", ""));
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
-
-
     // ===== 로그 처리 관련 유틸리티 =====
 
     public static String cleanLogLine(String line) {
         if (line == null || line.isEmpty()) return "";
 
-        // 마인크래프트 서버 로그에서 불필요한 정보 제거
         if (line.contains("]: ")) {
             int index = line.indexOf("]: ");
             if (index != -1 && index + 3 < line.length()) {
                 String cleanedLine = line.substring(index + 3);
-                // 길이 제한 (UI에 맞게)
                 if (cleanedLine.length() > 50) {
                     cleanedLine = cleanedLine.substring(0, 47) + "...";
                 }
@@ -272,7 +558,6 @@ public class utils {
             }
         }
 
-        // 길이 제한
         if (line.length() > 50) {
             line = line.substring(0, 47) + "...";
         }
@@ -280,7 +565,20 @@ public class utils {
         return line;
     }
 
-
+    private static void loadExistingLogs(String serverName, JTextArea consoleArea) {
+        File logFile = getLogFile(serverName);
+        if (logFile.exists()) {
+            try (BufferedReader logReader = new BufferedReader(new FileReader(logFile))) {
+                String logLine;
+                while ((logLine = logReader.readLine()) != null) {
+                    consoleArea.append(logLine + "\n");
+                }
+            } catch (IOException e) {
+                consoleArea.append("로그 파일 읽기 실패: " + e.getMessage() + "\n");
+            }
+        }
+        consoleArea.append("서버가 중지되어 있습니다.\n");
+    }
 
     // ===== EULA 파일 생성 =====
 
@@ -296,8 +594,6 @@ public class utils {
             e.printStackTrace();
         }
     }
-
-
 
     // ===== 서버 관리 관련 유틸리티 =====
 
@@ -346,7 +642,6 @@ public class utils {
                         }
                     }
                 } catch (Exception e) {
-                    // 파일 읽기 실패 시 폴더명 사용
                     existingNames.add(serverDir.getName());
                 }
             }
@@ -357,7 +652,6 @@ public class utils {
 
     public static void saveServerConfig(String name, String version, String launcher, String eulaAccepted) {
         try {
-            // 서버 디렉토리 생성
             File serverDir = getServerDirectory(name);
             if (!serverDir.exists()) {
                 if (!serverDir.mkdirs()) {
@@ -365,7 +659,6 @@ public class utils {
                 }
             }
 
-            // settings.txt 파일에 서버 정보 저장
             File settingsFile = new File(serverDir, "settings.txt");
             try (PrintWriter writer = new PrintWriter(new FileWriter(settingsFile))) {
                 writer.println("name=" + name);
@@ -377,10 +670,8 @@ public class utils {
                 System.out.println("서버 설정 저장 완료: " + settingsFile.getAbsolutePath());
             }
 
-            // EULA 파일 생성
             createEulaFile(serverDir, eulaAccepted);
 
-            // Paper JAR 다운로드 (별도 스레드에서 실행)
             new Thread(() -> {
                 try {
                     File paperJar = new File(serverDir, "paper.jar");
@@ -396,7 +687,6 @@ public class utils {
             System.err.println("서버 설정 저장 실패: " + e.getMessage());
             e.printStackTrace();
 
-            // 사용자에게 오류 알림
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(null,
                         "서버 설정 저장 중 오류가 발생했습니다:\n" + e.getMessage(),
@@ -406,4 +696,93 @@ public class utils {
         }
     }
 
+    // ===== 네트워크/API 관련 유틸리티 =====
+
+    public static List<String> getMinecraftVersions() throws Exception {
+        URL url = new URL("https://api.papermc.io/v2/projects/paper");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        InputStreamReader reader = new InputStreamReader(conn.getInputStream());
+        StringBuilder sb = new StringBuilder();
+        int ch;
+        while ((ch = reader.read()) != -1) {
+            sb.append((char) ch);
+        }
+
+        JSONObject json = new JSONObject(sb.toString());
+        JSONArray versions = json.getJSONArray("versions");
+
+        List<String> versionList = new ArrayList<>();
+        for (int i = 0; i < versions.length(); i++) {
+            versionList.add(versions.getString(i));
+        }
+
+        versionList.sort((v1, v2) -> compareVersions(v2, v1));
+        return versionList;
+    }
+
+    public static void downloadLatestPaperJar(String version, File destination) throws Exception {
+        String buildsApiUrl = "https://api.papermc.io/v2/projects/paper/versions/" + version + "/builds";
+        HttpURLConnection conn = (HttpURLConnection) new URL(buildsApiUrl).openConnection();
+        conn.setRequestMethod("GET");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+
+        JSONObject json = new JSONObject(response.toString());
+        JSONArray builds = json.getJSONArray("builds");
+        if (builds.length() == 0) throw new IOException("해당 버전에 대한 빌드 없음");
+
+        JSONObject latestBuildObj = builds.getJSONObject(builds.length() - 1);
+        int latestBuild = latestBuildObj.getInt("build");
+
+        String jarName = "paper-" + version + "-" + latestBuild + ".jar";
+        String downloadUrl = String.format(
+                "https://api.papermc.io/v2/projects/paper/versions/%s/builds/%d/downloads/%s",
+                version, latestBuild, jarName
+        );
+
+        try (BufferedInputStream in = new BufferedInputStream(new URL(downloadUrl).openStream());
+             FileOutputStream out = new FileOutputStream(destination)) {
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer, 0, buffer.length)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+
+            System.out.println("paper.jar 다운로드 완료: " + destination.getAbsolutePath());
+        }
+    }
+
+    // ===== 버전 비교 관련 유틸리티 =====
+
+    public static int compareVersions(String v1, String v2) {
+        String[] parts1 = v1.split("\\.");
+        String[] parts2 = v2.split("\\.");
+
+        int length = Math.max(parts1.length, parts2.length);
+        for (int i = 0; i < length; i++) {
+            int num1 = i < parts1.length ? parseVersionPart(parts1[i]) : 0;
+            int num2 = i < parts2.length ? parseVersionPart(parts2[i]) : 0;
+            if (num1 != num2) {
+                return Integer.compare(num1, num2);
+            }
+        }
+        return 0;
+    }
+
+    public static int parseVersionPart(String part) {
+        try {
+            return Integer.parseInt(part.replaceAll("\\D.*", ""));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
 }
