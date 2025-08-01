@@ -26,13 +26,15 @@ public class ServerWizard {
     private boolean agreedEula = false;
 
     private ServerCreationCallback callback;
+    private Runnable onCloseCallback;
 
     public interface ServerCreationCallback {
         void onServerCreated(String name, String version, String launcher, Boolean eula);
     }
 
-    public void showWizard(ServerCreationCallback callback) {
+    public void showWizard(ServerCreationCallback callback, Runnable onCloseCallback) {
         this.callback = callback;
+        this.onCloseCallback = onCloseCallback;
         final int[] current = {1};
 
         JFrame wizardFrame = new JFrame("서버 추가");
@@ -45,7 +47,9 @@ public class ServerWizard {
         wizardFrame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
-                // 부모 창의 addButton 재활성화는 부모에서 처리하도록 함
+                if (onCloseCallback != null) {
+                    onCloseCallback.run();
+                }
             }
         });
 
@@ -194,6 +198,9 @@ public class ServerWizard {
                 } else if (existingServers.contains(serverName)) {
                     warningLabel.setText("이미 존재하는 서버 이름입니다.");
                     nextButton.setEnabled(false);
+                } else if (utils.isReservedName(serverName)) {
+                    warningLabel.setText("사용할 수 없는 이름입니다.");
+                    nextButton.setEnabled(false);
                 } else {
                     warningLabel.setText("");
                     nextButton.setEnabled(true);
@@ -302,6 +309,9 @@ public class ServerWizard {
                         next.setEnabled(false);
                     } else if (existingServers.contains(currentName)) {
                         warningLabel.setText("이미 존재하는 서버 이름입니다.");
+                        next.setEnabled(false);
+                    } else if (utils.isReservedName(currentName)) {
+                        warningLabel.setText("사용할 수 없는 이름입니다.");
                         next.setEnabled(false);
                     } else {
                         warningLabel.setText("");

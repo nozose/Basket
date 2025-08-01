@@ -21,7 +21,7 @@ public class utils {
     }
 
     public static JButton createImageButton(Integer width, Integer height, String path) {
-        JButton button = new JButton(resizeIcon(loadIcon(path), width, height));
+        JButton button = new JButton(resizeIcon(loadIcon(path), width - 10, height - 10));
         button.setFocusPainted(false);
         button.setPreferredSize(new Dimension(width, height));
         return button;
@@ -64,6 +64,8 @@ public class utils {
 
         return frame;
     }
+
+
 
     // ===== 서버 박스 생성 블록들 =====
 
@@ -130,6 +132,8 @@ public class utils {
 
         return right;
     }
+
+
 
     // ===== 서버 프로세스 관리 블록들 =====
 
@@ -254,6 +258,8 @@ public class utils {
         }
     }
 
+
+
     // ===== 서버 관리 창 생성 블록들 =====
 
     public static JFrame createServerManageFrame(String serverName, String version) {
@@ -337,6 +343,8 @@ public class utils {
         return commandPanel;
     }
 
+
+
     // ===== 서버 삭제 관련 블록들 =====
 
     public static boolean confirmServerDeletion(String serverName, Component parent) {
@@ -418,6 +426,8 @@ public class utils {
         }
     }
 
+
+
     // ===== 서버 로딩 관련 블록들 =====
 
     public static void loadAndCreateSavedServers(JPanel serversPanel,
@@ -468,6 +478,8 @@ public class utils {
         }));
     }
 
+
+
     // ===== 이미지 관련 유틸리티 =====
 
     public static ImageIcon loadIcon(String path) {
@@ -485,6 +497,8 @@ public class utils {
         Image resized = img.getScaledInstance(size, size, Image.SCALE_SMOOTH);
         return new ImageIcon(resized);
     }
+
+
 
     // ===== 파일/디렉토리 관련 유틸리티 =====
 
@@ -542,6 +556,8 @@ public class utils {
         directory.delete();
     }
 
+
+
     // ===== 로그 처리 관련 유틸리티 =====
 
     public static String cleanLogLine(String line) {
@@ -580,6 +596,8 @@ public class utils {
         consoleArea.append("서버가 중지되어 있습니다.\n");
     }
 
+
+
     // ===== EULA 파일 생성 =====
 
     public static void createEulaFile(File serverDir, String eulaAccepted) {
@@ -594,6 +612,8 @@ public class utils {
             e.printStackTrace();
         }
     }
+
+
 
     // ===== 서버 관리 관련 유틸리티 =====
 
@@ -696,6 +716,8 @@ public class utils {
         }
     }
 
+
+
     // ===== 네트워크/API 관련 유틸리티 =====
 
     public static List<String> getMinecraftVersions() throws Exception {
@@ -761,6 +783,8 @@ public class utils {
         }
     }
 
+
+
     // ===== 버전 비교 관련 유틸리티 =====
 
     public static int compareVersions(String v1, String v2) {
@@ -785,4 +809,6 @@ public class utils {
             return 0;
         }
     }
+
+
 }

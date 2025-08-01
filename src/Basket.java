@@ -1,4 +1,5 @@
 import ServerWizard.ServerWizard;
+import Settings.Settings;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,6 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Basket extends JFrame {
     // 데이터 저장소들
     public static JButton addButton;
+    public static JButton settings;
+
     private static JPanel serversPanel;
     private static ConcurrentHashMap<String, Process> runningServers = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, JLabel> serverStatusLabels = new ConcurrentHashMap<>();
@@ -17,6 +20,7 @@ public class Basket extends JFrame {
     private static ConcurrentHashMap<String, JTextArea> serverConsoleAreas = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, JFrame> serverManageFrames = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, JPanel> serverBoxes = new ConcurrentHashMap<>();
+    private static JFrame settingsFrame = null;
 
     public static void main(String[] args) {
         initializeMainComponents();
@@ -24,6 +28,8 @@ public class Basket extends JFrame {
         createAndShowMainWindow();
         setupApplicationShutdown();
     }
+
+
 
     // ===== 메인 컴포넌트 초기화 =====
 
@@ -47,10 +53,15 @@ public class Basket extends JFrame {
     }
 
     private static void createAndShowMainWindow() {
-        // 네비게이션 생성 (utils의 UI 블록 사용)
+        JPanel navigationPanel = utils.createNavigationPanel(600, 50);
+
         addButton = utils.createTextButton(100, 40, "서버 추가");
         addButton.addActionListener(e -> showServerCreationWizard());
-        JPanel navigationPanel = utils.createNavigationPanel(600, 50, addButton);
+        navigationPanel.add(addButton);
+
+        settings = utils.createImageButton(40, 40, "resources/settings.png");
+        settings.addActionListener(e -> openSettings());
+        navigationPanel.add(settings);
 
         // 스크롤 패널 생성 (utils의 스크롤 블록 사용)
         JScrollPane scrollPane = utils.createScrollPane(serversPanel, false, true);
@@ -65,6 +76,8 @@ public class Basket extends JFrame {
         // utils의 셧다운 훅 블록 사용
         utils.setupShutdownHook(runningServers);
     }
+
+
 
     // ===== 서버 생성 마법사 =====
 
@@ -91,8 +104,39 @@ public class Basket extends JFrame {
             serverBoxes.put(name, serverBox);
 
             addButton.setEnabled(true);
+        }, () -> {
+            // 창이 닫힐 때 addButton 다시 활성화
+            addButton.setEnabled(true);
         });
     }
+
+
+
+    // ===== Basket 설정 =====
+
+    private static void openSettings() {
+        // 이미 열린 설정 창이 있으면 포커스만 이동
+        if (settingsFrame != null && settingsFrame.isDisplayable()) {
+            settingsFrame.toFront();
+            settingsFrame.requestFocus();
+            return;
+        }
+
+        Settings settings1 = new Settings();
+        settingsFrame = settings1.showSettings();
+        
+        // 창이 닫힐 때 참조 제거
+        if (settingsFrame != null) {
+            settingsFrame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    settingsFrame = null;
+                }
+            });
+        }
+    }
+
+
 
     // ===== 서버 상태 토글 =====
 
@@ -150,6 +194,8 @@ public class Basket extends JFrame {
         }
     }
 
+
+
     // ===== 서버 관리 창 =====
 
     private static void openServerManageFrame(String serverName) {
@@ -196,6 +242,8 @@ public class Basket extends JFrame {
         manageFrame.setVisible(true);
     }
 
+
+
     // ===== 서버 삭제 =====
 
     private static void deleteServerWithConfirmation(String serverName, JFrame parentFrame) {
@@ -212,6 +260,8 @@ public class Basket extends JFrame {
             parentFrame.dispose();
         }
     }
+
+
 
     // ===== 유틸리티 메서드들 =====
 
@@ -274,8 +324,11 @@ public class Basket extends JFrame {
         return "알 수 없음";
     }
 
+
+
     // 서버 생성 콜백 인터페이스
     public interface ServerCreationCallback {
         void onServerCreated(String name, String version, String launcher, Boolean eula);
     }
+
 }
