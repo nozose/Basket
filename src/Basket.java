@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Basket extends JFrame {
     public static JButton addButton;
+
     private static Servers servers; // static으로 변경하여 전역 접근 가능
     private static ConcurrentHashMap<String, Process> runningServers = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, JLabel> serverStatusLabels = new ConcurrentHashMap<>();
