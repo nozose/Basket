@@ -1,11 +1,14 @@
+import Settings.Settings;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import org.json.*;
 
@@ -453,7 +456,8 @@ public class utils {
         File serverFolder = getServerDirectory(serverName);
         if (serverFolder.exists()) {
             try {
-                Desktop.getDesktop().open(serverFolder);
+ProcessBuilder pb = new ProcessBuilder("explorer.exe", serverFolder.getAbsolutePath());
+            pb.start();
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(parent,
                         "폴더를 여는 중 오류가 발생했습니다: " + ex.getMessage(),
@@ -478,8 +482,16 @@ public class utils {
                                                  ConcurrentHashMap<String, JLabel> statusLabels2,
                                                  ActionListener launchActionProvider,
                                                  ActionListener editActionProvider) {
-        File dir = new File("servers");
-        if (!dir.exists()) return;
+        Settings settings = new Settings();
+        String serversPath = settings.getPathOrDefault("servers");
+        File dir = new File(serversPath);
+        if (!dir.exists()) {
+            // 디렉토리가 없으면 생성 시도
+            if (!dir.mkdirs()) {
+                System.err.println("서버 디렉토리 생성 실패: " + serversPath);
+                return;
+            }
+        }
 
         File[] serverDirs = dir.listFiles(File::isDirectory);
         if (serverDirs == null) return;
@@ -579,8 +591,10 @@ public class utils {
     }
 
     public static File getServerDirectory(String serverName) {
+        Settings settings = new Settings();
+        String serversPath = settings.getPathOrDefault("servers");
         String sanitizedName = sanitizeFileName(serverName);
-        return new File("servers", sanitizedName);
+        return new File(serversPath, sanitizedName);
     }
 
     public static File getLogFile(String serverName) {

@@ -127,7 +127,7 @@ public class Basket extends JFrame {
         }
 
         Settings settings1 = new Settings();
-        settingsFrame = settings1.showSettings();
+        settingsFrame = settings1.showSettings(() -> refreshServerList());
         
         // 창이 닫힐 때 참조 제거
         if (settingsFrame != null) {
@@ -263,6 +263,28 @@ public class Basket extends JFrame {
             );
             parentFrame.dispose();
         }
+    }
+
+    // ===== 서버 목록 새로고침 =====
+
+    private static void refreshServerList() {
+        SwingUtilities.invokeLater(() -> {
+            // 기존 서버 박스들 제거
+            serverBoxes.clear();
+            serverStatusLabels.clear();
+            serverStatusLabels2.clear();
+            
+            // 서버 패널 초기화 (글루 제외하고 모든 컴포넌트 제거)
+            serversPanel.removeAll();
+            serversPanel.add(Box.createVerticalGlue());
+            
+            // 새 경로에서 서버들 다시 로드
+            loadExistingServers();
+            
+            // UI 업데이트
+            serversPanel.revalidate();
+            serversPanel.repaint();
+        });
     }
 
 
