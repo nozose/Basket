@@ -4,13 +4,21 @@ import javax.swing.*;
 import java.awt.*;
 
 public class Settings {
-    public JFrame showSettings() {
-        JFrame settingFrame = new JFrame("설정");
+    JFrame settingFrame = new JFrame("설정");
+
+    public void settingFrame() {
         settingFrame.setSize(new Dimension(700, 600));
 
         settingFrame.setLocationRelativeTo(null);
         settingFrame.setResizable(false);
         settingFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+    }
+
+    public JFrame showSettings() {
+        settingFrame();
+
+        JPanel nav = new JPanel();
 
         settingFrame.setVisible(true);
         return settingFrame;

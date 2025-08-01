@@ -37,7 +37,8 @@ public class Basket extends JFrame {
         // 서버들을 담을 패널 생성
         serversPanel = new JPanel();
         serversPanel.setLayout(new BoxLayout(serversPanel, BoxLayout.Y_AXIS));
-        serversPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        serversPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        serversPanel.add(Box.createVerticalGlue());
     }
 
     private static void loadExistingServers() {
@@ -65,6 +66,7 @@ public class Basket extends JFrame {
 
         // 스크롤 패널 생성 (utils의 스크롤 블록 사용)
         JScrollPane scrollPane = utils.createScrollPane(serversPanel, false, true);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setPreferredSize(new Dimension(580, 0));
 
         // 메인 프레임 생성 (utils의 프레임 블록 사용)
@@ -97,8 +99,10 @@ public class Basket extends JFrame {
                     e -> openServerManageFrame(name)
             );
 
-            // 패널에 추가
-            serversPanel.add(serverBox);
+            // 패널에 추가 (글루 전에 삽입)
+            int insertIndex = serversPanel.getComponentCount() - 1; // 글루 전에
+            serversPanel.add(serverBox, insertIndex);
+            serversPanel.add(Box.createRigidArea(new Dimension(0, 8)), insertIndex + 1);
             serversPanel.revalidate();
             serversPanel.repaint();
             serverBoxes.put(name, serverBox);
@@ -220,7 +224,7 @@ public class Basket extends JFrame {
                 e -> deleteServerWithConfirmation(serverName, manageFrame)
         );
 
-        JScrollPane consoleScrollPane = utils.createConsolePanel(serverName, serverConsoleAreas);
+        JScrollPane consoleScrollPane = utils.createConsolePanel(serverName, serverConsoleAreas, runningServers);
         JPanel commandPanel = utils.createCommandPanel(serverName, runningServers, serverConsoleAreas);
 
         // 레이아웃 조합

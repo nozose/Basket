@@ -93,13 +93,35 @@ public class utils {
                                                ConcurrentHashMap<String, JLabel> statusLabels2) {
         JPanel left = new JPanel();
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-        left.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
+        left.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 8));
 
-        left.add(new JLabel(name));
-        left.add(new JLabel(version));
+        // Create a panel for name and version on the same line with zero padding
+        JPanel nameVersionPanel = new JPanel();
+        nameVersionPanel.setLayout(new BoxLayout(nameVersionPanel, BoxLayout.X_AXIS));
+        nameVersionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JLabel nameLabel = new JLabel(name);
+        JLabel separatorLabel = new JLabel(" | ");
+        separatorLabel.setForeground(Color.GRAY);
+        JLabel versionLabel = new JLabel(version);
+        versionLabel.setForeground(Color.GRAY);
+        
+        nameVersionPanel.add(nameLabel);
+        nameVersionPanel.add(separatorLabel);
+        nameVersionPanel.add(versionLabel);
+        nameVersionPanel.add(Box.createHorizontalGlue()); // Push everything to the left
+        
+        left.add(nameVersionPanel);
 
+        // Add top padding before status labels
+        left.add(Box.createVerticalStrut(7));
+        // Status labels with proper left alignment and line breaks
         JLabel statusLabel1 = createStatusLabel("준비됨");
         JLabel statusLabel2 = createStatusLabel("");
+        
+        // Ensure labels are left-aligned
+        statusLabel1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        statusLabel2.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         left.add(statusLabel1);
         left.add(statusLabel2);
@@ -119,7 +141,8 @@ public class utils {
     }
 
     public static JPanel createServerControlPanel(ActionListener launchAction, ActionListener editAction) {
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 8));
+        right.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 12));
 
         JButton launchButton = createImageButton(30, 30, "/resources/play.png");
         JButton editButton = createImageButton(30, 30, "/resources/edit.png");
@@ -300,7 +323,8 @@ public class utils {
     }
 
     public static JScrollPane createConsolePanel(String serverName,
-                                                 ConcurrentHashMap<String, JTextArea> consoleAreas) {
+                                                 ConcurrentHashMap<String, JTextArea> consoleAreas,
+                                                 ConcurrentHashMap<String, Process> runningServers) {
         JTextArea consoleArea = new JTextArea();
         consoleArea.setEditable(false);
         consoleArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
@@ -311,7 +335,7 @@ public class utils {
         consoleScrollPane.setBorder(BorderFactory.createTitledBorder("콘솔 출력"));
         consoleScrollPane.setPreferredSize(new Dimension(680, 300));
 
-        loadExistingLogs(serverName, consoleArea);
+        loadExistingLogs(serverName, consoleArea, runningServers);
         consoleAreas.put(serverName, consoleArea);
 
         return consoleScrollPane;
@@ -379,11 +403,29 @@ public class utils {
             deleteDirectory(serverDir);
         }
 
-        // UI에서 서버 제거
+        // UI에서 서버 제거 (서버 박스와 그 다음 간격 컴포넌트 모두 제거)
         JPanel serverBox = serverBoxes.get(serverName);
         if (serverBox != null) {
             SwingUtilities.invokeLater(() -> {
-                serversPanel.remove(serverBox);
+                int serverBoxIndex = -1;
+                Component[] components = serversPanel.getComponents();
+                for (int i = 0; i < components.length; i++) {
+                    if (components[i] == serverBox) {
+                        serverBoxIndex = i;
+                        break;
+                    }
+                }
+                
+                if (serverBoxIndex != -1) {
+                    // 서버 박스 제거
+                    serversPanel.remove(serverBoxIndex);
+                    // 다음 컴포넌트가 간격인지 확인하고 제거
+                    if (serverBoxIndex < serversPanel.getComponentCount() && 
+                        serversPanel.getComponent(serverBoxIndex) instanceof Box.Filler) {
+                        serversPanel.remove(serverBoxIndex);
+                    }
+                }
+                
                 serversPanel.revalidate();
                 serversPanel.repaint();
                 serverBoxes.remove(serverName);
@@ -456,7 +498,10 @@ public class utils {
                 if (name != null && version != null) {
                     JPanel serverBox = createServerBox(name, version, statusLabels1, statusLabels2,
                             launchActionProvider, editActionProvider);
-                    serversPanel.add(serverBox);
+                    // 글루 전에 삽입
+                    int insertIndex = serversPanel.getComponentCount() - 1;
+                    serversPanel.add(serverBox, insertIndex);
+                    serversPanel.add(Box.createRigidArea(new Dimension(0, 8)), insertIndex + 1);
                     serverBoxes.put(name, serverBox);
                 }
             } catch (IOException e) {
@@ -581,7 +626,7 @@ public class utils {
         return line;
     }
 
-    private static void loadExistingLogs(String serverName, JTextArea consoleArea) {
+    private static void loadExistingLogs(String serverName, JTextArea consoleArea, ConcurrentHashMap<String, Process> runningServers) {
         File logFile = getLogFile(serverName);
         if (logFile.exists()) {
             try (BufferedReader logReader = new BufferedReader(new FileReader(logFile))) {
@@ -593,7 +638,13 @@ public class utils {
                 consoleArea.append("로그 파일 읽기 실패: " + e.getMessage() + "\n");
             }
         }
-        consoleArea.append("서버가 중지되어 있습니다.\n");
+        
+        // Only show message when server is stopped
+        Process serverProcess = runningServers.get(serverName);
+        if (serverProcess == null || !serverProcess.isAlive()) {
+            consoleArea.append("서버가 중지되어 있습니다.\n");
+        }
+        // Don't show anything when server is running
     }
 
 
