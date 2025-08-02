@@ -4,6 +4,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.util.Properties;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.stage.DirectoryChooser;
 
 public class Settings {
     private static final String CONFIG_FILE = "config.properties";
@@ -63,18 +66,62 @@ public class Settings {
     }
 
     public void selectAndSaveFolderPath() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-
-        int result = chooser.showOpenDialog(settingFrame);
-
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedDir = chooser.getSelectedFile();
-            path = selectedDir.getAbsolutePath();
-            saveConfig();
-            // 경로 변경 시 콜백 호출
-            if (onPathChanged != null) {
-                onPathChanged.run();
+        // JavaFX 초기화 (처음 한 번만 실행됨)
+        initializeJavaFX();
+        
+        // JavaFX Application Thread에서 DirectoryChooser 실행
+        Platform.runLater(() -> {
+            DirectoryChooser directoryChooser = new DirectoryChooser();
+            directoryChooser.setTitle("폴더 선택");
+            
+            // 현재 경로가 있으면 초기 디렉토리로 설정
+            if (path != null && !path.isEmpty()) {
+                java.io.File currentDir = new java.io.File(path);
+                if (currentDir.exists() && currentDir.isDirectory()) {
+                    directoryChooser.setInitialDirectory(currentDir);
+                }
+            }
+            
+            java.io.File selectedDir = directoryChooser.showDialog(null);
+            
+            if (selectedDir != null) {
+                // Swing EDT에서 UI 업데이트 실행
+                SwingUtilities.invokeLater(() -> {
+                    path = selectedDir.getAbsolutePath();
+                    saveConfig();
+                    // 경로 변경 시 콜백 호출
+                    if (onPathChanged != null) {
+                        onPathChanged.run();
+                    }
+                    // pathLabel 업데이트를 위해 다시 호출될 수 있도록
+                    updatePathLabel();
+                });
+            }
+        });
+    }
+    
+    private static boolean javaFXInitialized = false;
+    
+    private void initializeJavaFX() {
+        if (!javaFXInitialized) {
+            // JavaFX 모듈 경고 억제
+            System.setProperty("javafx.platform.traceShutdown", "false");
+            System.setProperty("prism.verbose", "false");
+            
+            // JFXPanel을 생성해서 JavaFX 런타임 초기화
+            new JFXPanel();
+            javaFXInitialized = true;
+        }
+    }
+    
+    private void updatePathLabel() {
+        // generalPanel에서 pathLabel을 찾아서 업데이트
+        Component[] components = generalPanel.getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JLabel) {
+                JLabel label = (JLabel) comp;
+                label.setText(path != null ? path : "기본 경로: servers");
+                break;
             }
         }
     }

@@ -1,0 +1,5 @@
+name=wear'em might remix it
+version=1.21.8
+launcher=Paper
+eula=true
+created=Sat Aug 02 10:05:40 KST 2025
