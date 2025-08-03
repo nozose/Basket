@@ -456,21 +456,8 @@ public class utils {
         File serverFolder = getServerDirectory(serverName);
         if (serverFolder.exists()) {
             try {
-                String os = System.getProperty("os.name").toLowerCase();
-                ProcessBuilder pb;
-                
-                if (os.contains("mac") || os.contains("darwin")) {
-                    // macOS
-                    pb = new ProcessBuilder("open", serverFolder.getAbsolutePath());
-                } else if (os.contains("win")) {
-                    // Windows
-                    pb = new ProcessBuilder("explorer.exe", serverFolder.getAbsolutePath());
-                } else {
-                    // Linux/Unix
-                    pb = new ProcessBuilder("xdg-open", serverFolder.getAbsolutePath());
-                }
-                
-                pb.start();
+ProcessBuilder pb = new ProcessBuilder("explorer.exe", serverFolder.getAbsolutePath());
+            pb.start();
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(parent,
                         "폴더를 여는 중 오류가 발생했습니다: " + ex.getMessage(),
