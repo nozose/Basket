@@ -4,6 +4,7 @@ out/
 !**/src/test/**/out/
 servers/
 /servers/
+config.properties
 
 ### Eclipse ###
 .apt_generated
